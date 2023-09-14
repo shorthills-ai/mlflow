@@ -143,7 +143,7 @@ MLflow supports scaling in four dimensions:
   AWS S3 and `DBFS <https://docs.databricks.com/user-guide/dbfs-databricks-file-system.html>`_.
   MLflow can automatically download such files locally for projects that can only run on local
   files, or give the project a distributed storage URI if it supports that. This means that you
-  can write projects that build large datasets, such as featurizing a 100 TB file.
+  can write projects that build large datasets, such as featuring a 100 TB file.
 
 * MLflow Model Registry offers large organizations a central hub to collaboratively manage a complete
   model lifecycle. Many data science teams within an organization develop hundreds of models, each model with
