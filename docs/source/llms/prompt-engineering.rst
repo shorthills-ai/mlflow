@@ -145,7 +145,7 @@ or real-time inference.
 
 Step 8: Try new inputs
 ----------------------
-To test the behavior of your chosen LLM, prompt template, and parameters on a new inputs:
+To test the behavior of your chosen LLM, prompt template, and parameters on a new input:
 
 1. Click the *Add Row* button and fill in a value(s) your prompt template's input variable(s).
    For example, in the MLflow documentation use case, you can try asking a question
@@ -204,7 +204,7 @@ specified article.
 Step 10: Evaluate the new prompt template on previous inputs
 ------------------------------------------------------------
 Now that you've made an adjustment to your prompt template, it's important to make sure that
-the new template performs well on the previous inputs and compare the outputs with older
+the new template performs well on the previous inputs and compares the outputs with older
 configurations.
 
 1. From the **Evaluation** tab, click the **Evaluate all** button next to the new Run to evaluate
@@ -250,7 +250,7 @@ as follows:
 
 Step 12: Score or deploy the best configuration programmatically
 ----------------------------------------------------------------
-Once you have found a configuration of LLM, prompt template, and parameters that performs well, you
+Once you have found a configuration of LLM, prompt template, and parameters that perform well, you
 can score the corresponding MLflow Model in a Python environment of your choosing, or you can
 :ref:`deploy it for real-time serving <deploy-prompt-serving>`.
 
@@ -297,7 +297,7 @@ can score the corresponding MLflow Model in a Python environment of your choosin
 
 Deployment for real-time serving
 ================================
-Once you have found a configuration of LLM, prompt template, and parameters that performs well, you
+Once you have found a configuration of LLM, prompt template, and parameters that perform well, you
 can deploy the corresponding MLflow Model for real-time serving as follows:
 
 1. Register your model with the MLflow Model Registry. The following example registers
