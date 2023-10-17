@@ -10,6 +10,7 @@ import pathlib
 import posixpath
 import shutil
 import stat
+import subprocess
 import sys
 import tarfile
 import tempfile
@@ -18,6 +19,8 @@ import urllib.request
 import uuid
 from concurrent.futures import as_completed
 from contextlib import contextmanager
+from subprocess import CalledProcessError, TimeoutExpired
+from typing import Optional
 from urllib.parse import unquote
 from urllib.request import pathname2url
 
@@ -31,13 +34,16 @@ except ImportError:
     from yaml import SafeLoader as YamlSafeLoader
 
 from mlflow.entities import FileInfo
-from mlflow.environment_variables import MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR
+from mlflow.environment_variables import (
+    MLFLOW_DOWNLOAD_CHUNK_TIMEOUT,
+    MLFLOW_ENABLE_ARTIFACTS_PROGRESS_BAR,
+)
 from mlflow.exceptions import MissingConfigException
 from mlflow.protos.databricks_artifacts_pb2 import ArtifactCredentialType
 from mlflow.utils import download_cloud_file_chunk, merge_dicts
 from mlflow.utils.databricks_utils import _get_dbutils
 from mlflow.utils.os import is_windows
-from mlflow.utils.process import _exec_cmd, cache_return_value_per_process
+from mlflow.utils.process import cache_return_value_per_process
 from mlflow.utils.request_utils import cloud_storage_http_request, download_chunk
 from mlflow.utils.rest_utils import augmented_raise_for_status
 
@@ -197,20 +203,23 @@ def make_containing_dirs(path):
         os.makedirs(dir_name)
 
 
-def write_yaml(root, file_name, data, overwrite=False, sort_keys=True):
+def write_yaml(root, file_name, data, overwrite=False, sort_keys=True, ensure_yaml_extension=True):
     """
     Write dictionary data in yaml format.
 
     :param root: Directory name.
-    :param file_name: Desired file name. Will automatically add .yaml extension if not given
+    :param file_name: Desired file name.
     :param data: data to be dumped as yaml format
     :param overwrite: If True, will overwrite existing files
+    :param ensure_yaml_extension: If True, will automatically add .yaml extension if not given
     """
     if not exists(root):
         raise MissingConfigException(f"Parent directory '{root}' does not exist.")
 
     file_path = os.path.join(root, file_name)
-    yaml_file_name = file_path if file_path.endswith(".yaml") else file_path + ".yaml"
+    yaml_file_name = file_path
+    if ensure_yaml_extension and not file_path.endswith(".yaml"):
+        yaml_file_name = file_path + ".yaml"
 
     if exists(yaml_file_name) and not overwrite:
         raise Exception(f"Yaml file '{file_path}' exists as '{yaml_file_name}")
@@ -229,7 +238,7 @@ def write_yaml(root, file_name, data, overwrite=False, sort_keys=True):
         raise e
 
 
-def overwrite_yaml(root, file_name, data):
+def overwrite_yaml(root, file_name, data, ensure_yaml_extension=True):
     """
     Safely overwrites a preexisting yaml file, ensuring that file contents are not deleted or
     corrupted if the write fails. This is achieved by writing contents to a temporary file
@@ -237,10 +246,13 @@ def overwrite_yaml(root, file_name, data):
     preexisting file for a direct write.
 
     :param root: Directory name.
-    :param file_name: File name. Expects to have '.yaml' extension.
+    :param file_name: File name.
     :param data: The data to write, represented as a dictionary.
+    :param ensure_yaml_extension: If True, Will automatically add .yaml extension if not given
     """
     tmp_file_path = None
+    original_file_path = os.path.join(root, file_name)
+    original_file_mode = os.stat(original_file_path).st_mode
     try:
         tmp_file_fd, tmp_file_path = tempfile.mkstemp(suffix="file.yaml")
         os.close(tmp_file_fd)
@@ -250,11 +262,11 @@ def overwrite_yaml(root, file_name, data):
             data=data,
             overwrite=True,
             sort_keys=True,
+            ensure_yaml_extension=ensure_yaml_extension,
         )
-        shutil.move(
-            tmp_file_path,
-            os.path.join(root, file_name),
-        )
+        shutil.move(tmp_file_path, original_file_path)
+        # restores original file permissions, see https://docs.python.org/3/library/tempfile.html#tempfile.mkstemp
+        os.chmod(original_file_path, original_file_mode)
     finally:
         if tmp_file_path is not None and os.path.exists(tmp_file_path):
             os.remove(tmp_file_path)
@@ -649,6 +661,18 @@ def download_file_using_http_uri(http_uri, download_path, chunk_size=100000000, 
                 output_file.write(chunk)
 
 
+class _ChunkDownloadError(Exception):
+    def __init__(self, retryable: bool, error: str, status_code: Optional[int] = None) -> None:
+        self.retryable = retryable
+        self.error = error
+        self.status_code = status_code
+        super().__init__(
+            f"Chunk download failed: {error}"
+            if status_code is None
+            else f"Chunk download failed with status code {status_code}: {error}"
+        )
+
+
 def parallelized_download_file_using_http_uri(
     thread_pool_executor,
     http_uri,
@@ -671,49 +695,72 @@ def parallelized_download_file_using_http_uri(
     """
 
     def run_download(range_start, range_end):
+        template = """
+----- stdout -----
+{stdout}
+
+----- stderr -----
+{stderr}
+"""
         with tempfile.TemporaryDirectory() as tmpdir:
-            temp_file = os.path.join(tmpdir, "error_messages.txt")
-            download_proc = _exec_cmd(
-                cmd=[
-                    sys.executable,
-                    download_cloud_file_chunk.__file__,
-                    "--range-start",
-                    range_start,
-                    "--range-end",
-                    range_end,
-                    "--headers",
-                    json.dumps(headers or {}),
-                    "--download-path",
-                    download_path,
-                    "--http-uri",
-                    http_uri,
-                    "--temp-file",
-                    temp_file,
-                ],
-                throw_on_error=True,
-                synchronous=False,
-                capture_output=True,
-                stream_output=False,
-                env=env,
-            )
-            _, stderr = download_proc.communicate()
-            if download_proc.returncode != 0:
-                if os.path.exists(temp_file):
-                    with open(temp_file) as f:
-                        file_contents = f.read()
-                        if file_contents:
-                            return json.loads(file_contents)
-                        else:
-                            raise Exception(
-                                "Error from download_cloud_file_chunk not captured, "
-                                f"return code {download_proc.returncode}, stderr {stderr}"
-                            )
+            json_file = os.path.join(tmpdir, "http_error.json")
+            try:
+                subprocess.run(
+                    [
+                        sys.executable,
+                        download_cloud_file_chunk.__file__,
+                        "--range-start",
+                        str(range_start),
+                        "--range-end",
+                        str(range_end),
+                        "--headers",
+                        json.dumps(headers or {}),
+                        "--download-path",
+                        download_path,
+                        "--http-uri",
+                        http_uri,
+                        "--temp-file",
+                        json_file,
+                    ],
+                    text=True,
+                    check=True,
+                    capture_output=True,
+                    timeout=MLFLOW_DOWNLOAD_CHUNK_TIMEOUT.get(),
+                    env=env,
+                )
+            except TimeoutExpired as e:
+                raise _ChunkDownloadError(
+                    True,
+                    template.format(
+                        stdout=e.stdout.strip() or "(no stdout)",
+                        stderr=e.stderr.strip() or "(no stderr)",
+                    ),
+                ) from e
+            except CalledProcessError as e:
+                retryable = False
+                status_code = None
+                if os.path.exists(json_file):
+                    with open(json_file) as f:
+                        data = json.load(f)
+                        retryable = data.get("retryable", False)
+                        status_code = data.get("status_code")
+                raise _ChunkDownloadError(
+                    retryable,
+                    template.format(
+                        stdout=e.stdout.strip() or "(no stdout)",
+                        stderr=e.stderr.strip() or "(no stderr)",
+                    ),
+                    status_code,
+                ) from e
+            except Exception as e:
+                raise _ChunkDownloadError(False, str(e)) from e
 
     num_requests = int(math.ceil(file_size / float(chunk_size)))
     # Create file if it doesn't exist or erase the contents if it does. We should do this here
     # before sending to the workers so they can each individually seek to their respective positions
     # and write chunks without overwriting.
-    open(download_path, "w").close()
+    with open(download_path, "w"):
+        pass
     starting_index = 0
     if uri_type == ArtifactCredentialType.GCP_SIGNED_URL or uri_type is None:
         # GCP files could be transcoded, in which case the range header is ignored.
@@ -746,16 +793,11 @@ def parallelized_download_file_using_http_uri(
         for future in as_completed(futures):
             index = futures[future]
             try:
-                result = future.result()
-                if result is not None:
-                    failed_downloads[index] = result
-                else:
-                    pbar.update()
-            except Exception as e:
-                failed_downloads[index] = {
-                    "error_status_code": 500,
-                    "error_text": repr(e),
-                }
+                future.result()
+            except Exception:
+                failed_downloads[index] = future.exception()
+            else:
+                pbar.update()
 
     return failed_downloads
 
@@ -792,6 +834,7 @@ def create_tmp_dir():
         except Exception:
             repl_local_tmp_dir = os.path.join("/tmp", "repl_tmp_data", get_repl_id())
 
+        os.makedirs(repl_local_tmp_dir, exist_ok=True)
         return tempfile.mkdtemp(dir=repl_local_tmp_dir)
     else:
         return tempfile.mkdtemp()
@@ -895,7 +938,7 @@ def shutil_copytree_without_file_permissions(src_dir, dst_dir):
             file_path = os.path.join(dirpath, filename)
             relative_file_path = os.path.relpath(file_path, src_dir)
             abs_file_path = os.path.join(dst_dir, relative_file_path)
-            shutil.copyfile(file_path, abs_file_path)
+            shutil.copy2(file_path, abs_file_path)
 
 
 def contains_path_separator(path):
