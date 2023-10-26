@@ -909,7 +909,7 @@ This simplifies access requirements for users of the MLflow client, eliminating 
 configure access tokens or username and password environment variables for the underlying object store when writing or retrieving artifacts.
 To disable proxied access for artifacts, specify ``--no-serve-artifacts``.
 
-Provided an Mlflow server configuration where the ``--default-artifact-root`` is ``s3://my-root-bucket``,
+Provided an MLflow server configuration where the ``--default-artifact-root`` is ``s3://my-root-bucket``,
 the following patterns will all resolve to the configured proxied object store location of ``s3://my-root-bucket/mlartifacts``:
 
  * ``https://<host>:<port>/mlartifacts``

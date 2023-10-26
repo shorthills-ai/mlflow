@@ -114,7 +114,7 @@ The example package contains a ``setup.py`` that declares a number of
             "mlflow.project_backend": "dummy-backend=mlflow_test_plugin.dummy_backend:PluginDummyProjectBackend",
             # Define a MLflow model deployment plugin for target 'faketarget'
             "mlflow.deployments": "faketarget=mlflow_test_plugin.fake_deployment_plugin",
-            # Define a Mlflow model evaluator with name "dummy_evaluator"
+            # Define a MLflow model evaluator with name "dummy_evaluator"
             "mlflow.model_evaluator": "dummy_evaluator=mlflow_test_plugin.dummy_evaluator:DummyEvaluator",
         },
     )
@@ -237,8 +237,8 @@ reference implementations as an example:
 * `Example ArtifactRepository tests <https://github.com/mlflow/mlflow/blob/branch-1.5/tests/store/artifact/test_local_artifact_repo.py>`_
 * `Example RunContextProvider tests <https://github.com/mlflow/mlflow/blob/branch-1.5/tests/tracking/context/test_git_context.py>`_
 * `Example Model Registry Store tests <https://github.com/mlflow/mlflow/blob/branch-1.5/tests/store/model_registry/test_sqlalchemy_store.py>`_
-* `Example Custom Mlflow Evaluator tests <https://github.com/mlflow/mlflow/blob/branch-1.23/tests/resources/mlflow-test-plugin/mlflow_test_plugin/dummy_evaluator.py>`_
-* `Example Custom Mlflow server tests <https://github.com/mlflow/mlflow/blob/branch-2.2.0/tests/server/test_handlers.py>`_
+* `Example Custom MLflow Evaluator tests <https://github.com/mlflow/mlflow/blob/branch-1.23/tests/resources/mlflow-test-plugin/mlflow_test_plugin/dummy_evaluator.py>`_
+* `Example Custom MLflow server tests <https://github.com/mlflow/mlflow/blob/branch-2.2.0/tests/server/test_handlers.py>`_
 
 
 Distributing Your Plugin
