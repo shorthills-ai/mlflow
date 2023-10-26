@@ -114,7 +114,7 @@ The example package contains a ``setup.py`` that declares a number of
             "mlflow.project_backend": "dummy-backend=mlflow_test_plugin.dummy_backend:PluginDummyProjectBackend",
             # Define a MLflow model deployment plugin for target 'faketarget'
             "mlflow.deployments": "faketarget=mlflow_test_plugin.fake_deployment_plugin",
-            # Define a Mlflow model evaluator with name "dummy_evaluator"
+            # Define a MLflow model evaluator with name "dummy_evaluator"
             "mlflow.model_evaluator": "dummy_evaluator=mlflow_test_plugin.dummy_evaluator:DummyEvaluator",
         },
     )
