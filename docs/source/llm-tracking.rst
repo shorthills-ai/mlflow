@@ -6,7 +6,7 @@ MLflow LLM Tracking
 
 The Mlflow LLM Tracking component consists of two elements for logging and viewing the behavior of LLM's.
 Firstly it is a set of APIs that allow for logging inputs, outputs, and prompts submitted and returned
-from LLM's. Accompanying these APIs is a UI components that provides a simplified means of viewing the
+from LLM's. Accompanying these APIs is a UI component that provides a simplified means of viewing the
 results of experimental submissions (prompts and inputs) and the results (LLM outputs).
 
 .. contents:: Table of Contents
