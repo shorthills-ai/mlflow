@@ -7,7 +7,7 @@ MLflow is a versatile, expandable, open-source platform for managing workflows a
 
 .. figure:: _static/images/what-is-mlflow/mlflow-overview.png
     :width: 100%
-    :alt: MLflow overview, showing the ML lifecycle from data preparation to monitoring. Labels above show the personas associated each stage: Data engineers and scientists at the earlier stages, ML engineers and business stakeholders at the later stages. The Data Governance officer is involved at all stages. 
+    :alt: MLflow overview, showing the ML lifecycle from data preparation to monitoring. Labels above show the personas associated with each stage: Data engineers and scientists at the earlier stages, ML engineers and business stakeholders at the later stages. The Data Governance officer is involved at all stages. 
 
 MLflow has five components:
 
@@ -15,7 +15,7 @@ MLflow has five components:
 
 .. figure:: _static/images/what-is-mlflow/tracking-chart.png
     :width: 100%
-    :alt: Screenshot of the MLflow Tracking Chart view, showing a number of runs and a comparison of their parameters and metrics.
+    :alt: Screenshot of the MLflow Tracking Chart view, showing several runs and a comparison of their parameters and metrics.
 
 - :ref:`MLflow Models <models>`: A model packaging format and suite of tools that let you easily deploy a trained model (from any ML library) for batch or real-time inference on platforms such as Docker, Apache Spark, Databricks, Azure ML and AWS SageMaker. This image shows MLflow Tracking UI's view of a run's detail and its MLflow model. You can see that the artifacts in the **model** directory include the model weights, files describing the model's environment and dependencies, and sample code for loading the model and inferencing with it:
 
@@ -44,14 +44,14 @@ MLflow is used to manage the machine learning lifecycle from initial model devel
 Who uses MLflow?
 ----------------
 
-MLflow is used by data scientists and by MLOps professionals. Data scientists use MLflow to track experiments, structure code, package models, and to review and select models for deployment. MLOps professionals use MLflow to securely deploy models to production and to monitor deployments for performance and accuracy. 
+MLflow is used by data scientists and by MLOps professionals. Data scientists use MLflow to track experiments, structure code, package models, and review and select models for deployment. MLOps professionals use MLflow to deploy models to production securely and to monitor deployments for performance and accuracy. 
 
 MLflow use cases
 ----------------
 
 MLflow is used for a variety of machine learning use cases. Here are some examples:
 
-- A team of data scientists uses MLflow Tracking to record parameters and metrics from their experiments on a single problem domain. They use the MLflow UI to compare results and guide their exploration of the solution space. They store the outputs of their runs as MLflow models. 
+- A team of data scientists uses MLflow Tracking to record parameters and metrics from their experiments on a single problem domain. They use the MLflow UI to compare results and guide their solution space exploration. They store the outputs of their runs as MLflow models. 
 
 - An MLOps engineer uses the MLflow UI to compare the performance of different models and selects the best one for deployment. They register the model in the MLflow Registry to track this specific version's performance in production. 
 
